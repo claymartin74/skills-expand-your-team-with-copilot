@@ -365,6 +365,61 @@ document.addEventListener("DOMContentLoaded", () => {
     return "academic";
   }
 
+  // Social sharing functions
+  function getActivityShareUrl(activityName) {
+    // Create a URL that points to the current page
+    // In a real application, this could be a deep link to the specific activity
+    return window.location.origin + window.location.pathname;
+  }
+
+  function getActivityShareText(activityName, details) {
+    const formattedSchedule = formatSchedule(details);
+    return `Check out ${activityName} at Mergington High School! ${details.description} Schedule: ${formattedSchedule}`;
+  }
+
+  function shareOnFacebook(activityName, details) {
+    const url = getActivityShareUrl(activityName);
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  }
+
+  function shareOnTwitter(activityName, details) {
+    const text = getActivityShareText(activityName, details);
+    const url = getActivityShareUrl(activityName);
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  }
+
+  function shareViaEmail(activityName, details) {
+    const subject = `Check out ${activityName} at Mergington High School`;
+    const body = getActivityShareText(activityName, details) + `\n\nLearn more: ${getActivityShareUrl(activityName)}`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  }
+
+  async function copyActivityLink(activityName, button) {
+    const url = getActivityShareUrl(activityName);
+    try {
+      await navigator.clipboard.writeText(url);
+      // Show feedback by temporarily changing the tooltip text
+      const tooltipText = button.querySelector('.tooltip-text');
+      const originalText = tooltipText.textContent;
+      tooltipText.textContent = 'Link Copied!';
+      tooltipText.style.backgroundColor = 'var(--success)';
+      
+      // Reset after 2 seconds
+      setTimeout(() => {
+        tooltipText.textContent = originalText;
+        tooltipText.style.backgroundColor = '';
+      }, 2000);
+      
+      showMessage('Link copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      showMessage('Failed to copy link', 'error');
+    }
+  }
+
   // Function to fetch activities from API with optional day and time filters
   async function fetchActivities() {
     // Show loading skeletons first
@@ -554,6 +609,25 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
+      <div class="social-share">
+        <span class="share-label">Share:</span>
+        <button class="share-btn share-facebook tooltip" data-activity="${name}" aria-label="Share on Facebook">
+          <span class="share-icon">📘</span>
+          <span class="tooltip-text">Share on Facebook</span>
+        </button>
+        <button class="share-btn share-twitter tooltip" data-activity="${name}" aria-label="Share on Twitter">
+          <span class="share-icon">🐦</span>
+          <span class="tooltip-text">Share on Twitter/X</span>
+        </button>
+        <button class="share-btn share-email tooltip" data-activity="${name}" aria-label="Share via Email">
+          <span class="share-icon">✉️</span>
+          <span class="tooltip-text">Share via Email</span>
+        </button>
+        <button class="share-btn share-copy tooltip" data-activity="${name}" aria-label="Copy Link">
+          <span class="share-icon">🔗</span>
+          <span class="tooltip-text">Copy Link</span>
+        </button>
+      </div>
       <div class="activity-card-actions">
         ${
           currentUser
@@ -588,6 +662,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for social share buttons
+    const shareButtons = activityCard.querySelectorAll(".share-btn");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const activityName = button.dataset.activity;
+        
+        if (button.classList.contains("share-facebook")) {
+          shareOnFacebook(activityName, details);
+        } else if (button.classList.contains("share-twitter")) {
+          shareOnTwitter(activityName, details);
+        } else if (button.classList.contains("share-email")) {
+          shareViaEmail(activityName, details);
+        } else if (button.classList.contains("share-copy")) {
+          copyActivityLink(activityName, button);
+        }
+      });
+    });
 
     activitiesList.appendChild(activityCard);
   }
